@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Căn dx dy</title>
+  <meta name="claude:viewport-fit-sides" content="cover">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app">
+  <!-- CỘT TRÁI: SÂN KHẤU CANVAS -->
+  <section class="card">
+    <div class="bar">
+      <label>Scale pet ban đầu <input type="number" id="petScale" value="1" step="0.05" min="0.1"></label>
+      <label>Zoom 
+        <select id="zoom">
+          <option value="1">1×</option>
+          <option value="1.5" selected>1.5×</option>
+          <option value="2">2×</option>
+          <option value="3">3×</option>
+        </select>
+      </label>
+      <label><input type="checkbox" id="mirror"> Quay trái</label>
+      <label><input type="checkbox" id="ghostOn" checked> Ghost</label>
+      <label>Ghost là <select id="ghostSrc"></select></label>
+      <label><input type="checkbox" id="onion"> Lưu vết tất cả khung</label>
+      <button id="resetViewBtn" style="margin-left:auto;font-size:12px;padding:3px 8px;">Đặt lại góc nhìn</button>
+    </div>
+
+    <div class="stage-wrap">
+      <canvas id="cv" width="900" height="600" tabindex="0" aria-label="Sân khấu căn dx dy"></canvas>
+    </div>
+
+    <div class="legend">
+      <span><i style="border-color:var(--accent)"></i>đường chân</span>
+      <span><i style="border-color:var(--accent);border-top-style:dashed"></i>trục giữa pet chỉnh</span>
+      <span><i style="border-color:var(--ghost)"></i>ghost</span>
+      <span><b>Chuột trái:</b> Chỉnh dx/dy | <b>Chuột phải / Shift:</b> Di chuyển khung nhìn</span>
+    </div>
+
+    <div class="play">
+      <button id="playBtn" class="pri">Tạm dừng</button>
+      <input type="range" id="frameSl" min="0" max="0" value="0" aria-label="Khung hiện tại">
+      <span id="frameLbl" style="font-family:var(--mono);min-width:64px;text-align:right">0/0</span>
+    </div>
+  </section>
+
+  <!-- CỘT PHẢI: BẢNG ĐIỀU KHIỂN & CẤU HÌNH -->
+  <section style="display:flex;flex-direction:column;gap:14px;min-width:0">
+    <div class="card">
+      <div class="out-h">
+        <h2>Danh sách Nhân vật</h2>
+        <span class="hint-tag" id="petCountTag">0 pet</span>
+      </div>
+
+      <div class="pet-selector" id="petSelector"></div>
+
+      <label class="file" id="drop">
+        Thả file hoặc <b>nhiều thư mục</b> vào đây / 
+        <b id="btnSelectFolder" style="text-decoration:underline;">Chọn nhiều folder</b>
+        <input type="file" id="file" accept="image/*" multiple hidden>
+        <input type="file" id="folderInput" webkitdirectory directory multiple hidden>
+      </label>
+
+      <div class="tabs" id="tabs" style="margin-top:12px;"></div>
+      <div class="grid" id="fields"></div>
+
+      <div class="row">
+        <button id="suggest">Gợi ý theo ghost</button>
+        <button id="reset">Đặt lại dx dy</button>
+        <button id="pickBall" hidden>Đặt điểm phóng</button>
+      </div>
+      <p class="hint" id="hint"></p>
+    </div>
+
+    <div class="card">
+      <div class="out-h">
+        <h2>Cấu hình PET_ANIM</h2>
+        <div>
+          <button id="pasteConfig" style="margin-right:4px;">Dán cấu hình</button>
+          <button id="copy" class="pri">Sao chép</button>
+        </div>
+      </div>
+      <label style="display:block;margin-bottom:8px;color:var(--muted);font-size:12px">Tên pet hiện tại
+        <input type="text" id="petName" value="" placeholder="Nhập tên pet..." style="margin-top:3px">
+      </label>
+      <textarea id="out" spellcheck="false" placeholder="Cấu hình xuất ra của nhân vật đang chọn..."></textarea>
+    </div>
+  </section>
+</div>
+
+<!-- Nạp các module theo đúng thứ tự phụ thuộc -->
+<script src="modules/state.js"></script>
+<script src="modules/sheet-parser.js"></script>
+<script src="modules/renderer.js"></script>
+<script src="modules/file-handler.js"></script>
+<script src="modules/ui-controller.js"></script>
+
+</body>
+</html>
