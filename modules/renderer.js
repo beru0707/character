@@ -49,7 +49,14 @@ window.Renderer = (function () {
     return spacing * (idx + 1) + AppState.cameraOffset.x;
   }
 
+  // Càng nhiều pet thì sân khấu càng rộng (mỗi pet 140px) để không pet nào bị mất khỏi khung; canvas tự thu nhỏ vừa cột trái.
+  function fitStage() {
+    var need = Math.max(900, 140 * (AppState.petOrder.length + 1));
+    if (cv.width !== need) cv.width = need;
+  }
+
   function render(now) {
+    fitStage();
     var Z = num(document.getElementById('zoom').value, 1.5);
     var mirror = document.getElementById('mirror').checked;
     var GY = getGY();

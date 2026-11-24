@@ -186,7 +186,7 @@ window.UIController = (function () {
 
       add('cols', 'cols', s.cols, 1, 'cols', 1); add('rows', 'rows', s.rows, 1, 'rows', 1);
       add('frames', 'frames (0 = tự đếm)', s.frames, 1, 'frames', 0);
-      add('scale', 'scale', s.scale, 0.01, 'scale', 0.05);
+      add('scale', 'scale', r3(s.scale), 0.01, 'scale', 0.05);
       add('fps', 'fps', s.fps, 0.5, 'fps', 1);
 
       if (AppState.curState === 'walk') {
