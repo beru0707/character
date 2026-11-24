@@ -1,13 +1,22 @@
 window.AppState = (function () {
+  // Các trạng thái khớp với game: walk / idle / attack nằm ở walkSheet / idleSheet / attackSheet, các trạng thái còn lại (extra:true) nằm trong extra:{...}.
+  // cols x rows mặc định theo sheet của bộ ảnh Character/ trong game.
   var STATES_DEF = [
-    { k: 'walk', label: 'Đi bộ', cfg: 'walkSheet', cols: 6, rows: 6, fps: 12, scale: 1, move: true },
-    { k: 'idle', label: 'Đứng yên', cfg: 'idleSheet', cols: 6, rows: 6, fps: 12, scale: 1, move: true },
+    { k: 'walk', label: 'Đi bộ', cfg: 'walkSheet', cols: 4, rows: 3, fps: 12, scale: 1, move: true },
+    { k: 'idle', label: 'Đứng yên', cfg: 'idleSheet', cols: 4, rows: 3, fps: 10, scale: 1, move: true },
+    { k: 'attack', label: 'Tấn công', cfg: 'attackSheet', cols: 4, rows: 2, fps: 12.5, scale: 1, move: true },
+    { k: 'run', label: 'Chạy', cfg: 'run', extra: true, cols: 5, rows: 2, fps: 14, scale: 1, move: true },
+    { k: 'jumpup', label: 'Nhảy lên', cfg: 'jumpup', extra: true, cols: 5, rows: 1, fps: 12, scale: 1, move: true },
+    { k: 'jumpfall', label: 'Nhảy xuống', cfg: 'jumpfall', extra: true, cols: 5, rows: 1, fps: 12, scale: 1, move: true },
+    { k: 'jumpthrow', label: 'Nhảy + đánh', cfg: 'jumpthrow', extra: true, cols: 4, rows: 2, fps: 12, scale: 1, move: true },
+    { k: 'hurt', label: 'Bị đánh', cfg: 'hurt', extra: true, cols: 3, rows: 2, fps: 12, scale: 1, move: true },
+    { k: 'dizzy', label: 'Choáng', cfg: 'dizzy', extra: true, cols: 5, rows: 2, fps: 12, scale: 1, move: true },
+    { k: 'dead', label: 'Chết', cfg: 'dead', extra: true, cols: 5, rows: 2, fps: 12, scale: 1, move: true },
     { k: 'sleep', label: 'Ngủ', cfg: 'sleepSheet', cols: 1, rows: 1, fps: 6, scale: 1, move: true },
-    { k: 'attack', label: 'Tấn công', cfg: 'attackSheet', cols: 4, rows: 4, fps: 12.5, scale: 1, move: true },
     { k: 'skill1', label: 'Skill 1', cfg: 'skill1Sheet', cols: 4, rows: 4, fps: 12.5, scale: 1, move: true }
   ];
 
-  var DEF_FPS = { idle: 12, attack: 12.5, skill1: 12.5 };
+  var DEF_FPS = { idle: 10, attack: 12.5, skill1: 12.5, run: 14, jumpup: 12, jumpfall: 12, jumpthrow: 12, hurt: 12, dizzy: 12, dead: 12 };
 
   var pets = {};
   var petOrder = [];

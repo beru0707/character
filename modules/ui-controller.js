@@ -12,7 +12,7 @@ window.UIController = (function () {
     var petMatch = text.match(/['"]?([a-zA-Z0-9_\-]+)['"]?\s*:\s*\{/);
     var targetPet = AppState.activePet || 'Pet_1';
 
-    if (petMatch && petMatch[1] && !['walkSheet', 'idleSheet', 'sleepSheet', 'attackSheet', 'skill1Sheet'].includes(petMatch[1])) {
+    if (petMatch && petMatch[1] && !['walkSheet', 'idleSheet', 'sleepSheet', 'attackSheet', 'skill1Sheet', 'extra'].includes(petMatch[1])) {
       targetPet = petMatch[1];
     }
 
@@ -26,70 +26,44 @@ window.UIController = (function () {
     AppState.activePet = targetPet;
     if ($('petName')) $('petName').value = targetPet;
 
-    var cfgMap = {
-      walkSheet: 'walk',
-      idleSheet: 'idle',
-      sleepSheet: 'sleep',
-      attackSheet: 'attack',
-      skill1Sheet: 'skill1'
-    };
+    var parsedAny = false, pd = AppState.pets[targetPet];
 
-    var parsedAny = false;
-
-    // Duyệt đọc từng khối trạng thái
-    for (var cfgKey in cfgMap) {
-      var stateKey = cfgMap[cfgKey];
-      var s = AppState.pets[targetPet][stateKey];
-
-      var regex = new RegExp(cfgKey + '\\s*:\\s*\\{([^}]+)\\}', 'm');
-      var match = text.match(regex);
-
-      if (match && match[1]) {
-        var body = match[1];
-        parsedAny = true;
-
-        var srcM = body.match(/src\s*:\s*['"]([^'"]+)['"]/);
-        if (srcM) {
-          var parts = srcM[1].split('/');
-          s.name = parts[parts.length - 1];
-        }
-
-        var colsM = body.match(/cols\s*:\s*(\d+)/);
-        s.cols = colsM ? parseInt(colsM[1]) : 6;
-
-        var rowsM = body.match(/rows\s*:\s*(\d+)/);
-        s.rows = rowsM ? parseInt(rowsM[1]) : 6;
-
-        var framesM = body.match(/frames\s*:\s*(\d+)/);
-        s.frames = framesM ? parseInt(framesM[1]) : 0;
-
-        var scaleM = body.match(/scale\s*:\s*([\d\.]+)/);
-        s.scale = scaleM ? parseFloat(scaleM[1]) : 1;
-
-        var fpsM = body.match(/fps\s*:\s*([\d\.]+)/);
-        s.fps = fpsM ? parseFloat(fpsM[1]) : (AppState.DEF_FPS[stateKey] || 12);
-
-        var dxM = body.match(/dx\s*:\s*([-\d\.]+)/);
-        s.dx = dxM ? parseFloat(dxM[1]) : 0;
-
-        var dyM = body.match(/dy\s*:\s*([-\d\.]+)/);
-        s.dy = dyM ? parseFloat(dyM[1]) : 0;
-
-        var strideM = body.match(/stride\s*:\s*([\d\.]+)/);
-        s.stride = strideM ? parseFloat(strideM[1]) : 1;
-
-        var speedM = body.match(/speed\s*:\s*([\d\.]+)/);
-        s.speed = speedM ? parseFloat(speedM[1]) : 1;
-
-        var ballXM = body.match(/ballX\s*:\s*(\d+)/);
-        s.ballX = ballXM ? parseInt(ballXM[1]) : 40;
-
-        var ballYM = body.match(/ballY\s*:\s*(\d+)/);
-        s.ballY = ballYM ? parseInt(ballYM[1]) : 45;
-
-        s._ck = s._bk = null;
-      }
+    // Dòng "// PET_DEF  scale: 1.055, ox: 0.115, oy: 0.112" (do nút Sao chép xuất ra): ox/oy chính là dx/dy của Đi bộ
+    var pdLine = text.match(/\/\/\s*PET_DEF[^\n]*/);
+    if (pdLine) {
+      var sc0 = pdLine[0].match(/scale\s*:\s*([\d.]+)/), ox0 = pdLine[0].match(/\box\s*:\s*(-?[\d.]+)/), oy0 = pdLine[0].match(/\boy\s*:\s*(-?[\d.]+)/);
+      if (sc0) pd.petScale = parseFloat(sc0[1]);
+      pd.walk.dx = ox0 ? parseFloat(ox0[1]) : 0;
+      pd.walk.dy = oy0 ? parseFloat(oy0[1]) : 0;
     }
+
+    // Duyệt đọc từng khối trạng thái (walk/idle/attack... và các mục trong extra:{...})
+    AppState.STATES_DEF.forEach(function (d) {
+      var s = pd[d.k];
+      var regex = new RegExp('\\b' + d.cfg + '\\s*:\\s*\\{([^}]+)\\}', 'm');
+      var match = text.match(regex);
+      if (!(match && match[1])) return;
+      var body = match[1];
+      parsedAny = true;
+
+      var srcM = body.match(/src\s*:\s*['"]([^'"]+)['"]/);
+      if (srcM) { var parts = srcM[1].split('/'); s.name = parts[parts.length - 1]; s.rel = /^Character\//i.test(srcM[1]) ? parts.slice(2).join('/') : ''; }
+      function pick(re, def, fn) { var m = body.match(re); return m ? fn(m[1]) : def; }
+      s.cols = pick(/cols\s*:\s*(\d+)/, d.cols, parseInt);
+      s.rows = pick(/rows\s*:\s*(\d+)/, d.rows, parseInt);
+      s.frames = pick(/frames\s*:\s*(\d+)/, 0, parseInt);
+      s.scale = pick(/scale\s*:\s*([\d.]+)/, 1, parseFloat);
+      s.fps = pick(/fps\s*:\s*([\d.]+)/, AppState.DEF_FPS[d.k] || 12, parseFloat);
+      // dx/dy trong cấu hình game là TƯƠNG ĐỐI so với Đi bộ -> cộng lại thành tuyệt đối để vẽ trên sân khấu
+      var wdx = d.k === 'walk' ? 0 : pd.walk.dx, wdy = d.k === 'walk' ? 0 : pd.walk.dy;
+      s.dx = pick(/\bdx\s*:\s*(-?[\d.]+)/, 0, parseFloat) + wdx;
+      s.dy = pick(/\bdy\s*:\s*(-?[\d.]+)/, 0, parseFloat) + wdy;
+      s.stride = pick(/stride\s*:\s*([\d.]+)/, 1, parseFloat);
+      s.speed = pick(/speed\s*:\s*([\d.]+)/, 1, parseFloat);
+      s.ballX = pick(/ballX\s*:\s*(\d+)/, 40, parseInt);
+      s.ballY = pick(/ballY\s*:\s*(\d+)/, 45, parseInt);
+      s._ck = s._bk = s._mk = null;
+    });
 
     if (parsedAny) {
       buildUI();
@@ -207,7 +181,7 @@ window.UIController = (function () {
         var l = document.createElement('label');
         l.innerHTML = label + '<input type="number" id="f_' + id + '" step="' + step + '"' + (min !== undefined ? ' min="' + min + '"' : '') + '>';
         f.appendChild(l); var inp = l.querySelector('input'); inp.value = val;
-        inp.oninput = function () { s[key] = num(inp.value, 0); if (key === 'cols' || key === 'rows') s._ck = s._bk = null; refresh(); };
+        inp.oninput = function () { s[key] = num(inp.value, 0); if (key === 'cols' || key === 'rows') s._ck = s._bk = s._mk = null; refresh(); };
       }
 
       add('cols', 'cols', s.cols, 1, 'cols', 1); add('rows', 'rows', s.rows, 1, 'rows', 1);
@@ -249,28 +223,59 @@ window.UIController = (function () {
     if (by && document.activeElement !== by) by.value = r3(s.ballY);
   }
 
+  // Chuyển cấu hình của 1 pet thành đoạn mã dán thẳng vào game (js/config/pets.js).
+  // Trong game: ox/oy (PET_DEF) = dx/dy của Đi bộ, còn dx/dy các trạng thái khác là TƯƠNG ĐỐI so với Đi bộ.
+  function petText(pName, label) {
+    var pData = AppState.pets[pName]; if (!pData) return '';
+    var dir = 'Character/' + (label || pName).toUpperCase(), top = [], extra = [], w = pData.walk;
+    AppState.STATES_DEF.forEach(function (d) {
+      var s = pData[d.k]; if (!s.img && !s.name) return;
+      var nm = s.rel || s.name || (d.k + '.png'), ind = d.extra ? '      ' : '    ', parts = ["src: '" + dir + "/" + nm + "'"];
+      if (s.cols !== d.cols || s.rows !== d.rows) parts.push('cols: ' + s.cols, 'rows: ' + s.rows);
+      if (s.frames > 0) parts.push('frames: ' + s.frames);
+      if (r3(s.scale) !== 1) parts.push('scale: ' + r3(s.scale));
+      if (d.k !== 'sleep' && d.k !== 'walk' && s.fps !== AppState.DEF_FPS[d.k]) parts.push('fps: ' + s.fps);
+      if (d.k === 'walk') { if (s.stride !== 1) parts.push('stride: ' + r3(s.stride)); if (s.speed !== 1) parts.push('speed: ' + r3(s.speed)); }
+      else if (d.move) {
+        var rx = r3(s.dx - w.dx), ry = r3(s.dy - w.dy);
+        if (rx !== 0) parts.push('dx: ' + rx); if (ry !== 0) parts.push('dy: ' + ry);
+      }
+      if (d.k === 'skill1') parts.push('ballX: ' + Math.round(s.ballX), 'ballY: ' + Math.round(s.ballY));
+      if (d.extra) extra.push(ind + d.cfg + ': { ' + parts.join(', ') + ' },');
+      else top.push(ind + d.cfg + ': {\n' + ind + '  ' + parts.join(',\n' + ind + '  ') + '\n' + ind + '},');
+    });
+    if (!top.length && !extra.length) return '';
+    var head = '// PET_DEF  scale: ' + r3(pData.petScale) + ', ox: ' + r3(w.dx) + ', oy: ' + r3(w.dy) + '\n';
+    return head + "  '" + pName + "': {\n" + top.join('\n') + (extra.length ? '\n    extra: {\n' + extra.join('\n') + '\n    },' : '') + "\n  },";
+  }
+
   function output() {
     if (!AppState.activePet || !AppState.pets[AppState.activePet]) {
       $('out').value = 'Chưa có nhân vật nào.';
       return;
     }
-    var pet = $('petName').value.trim() || AppState.activePet, dir = 'assets/' + pet.toLowerCase(), lines = [];
-    var pData = AppState.pets[AppState.activePet];
+    var pet = $('petName').value.trim() || AppState.activePet;
+    $('out').value = petText(AppState.activePet, pet) || 'Nạp ít nhất một sheet để xem cấu hình.';
+  }
 
+  /* ---------- TỰ CĂN THEO ĐI BỘ ---------- */
+  // Cùng công thức của nút "Gợi ý theo ghost" nhưng dùng vùng nhìn thấy TRUNG VỊ của mọi khung, lấy Đi bộ làm mốc:
+  //  - Đi bộ: tâm thân về giữa, chân chạm đường chân (dx/dy của Đi bộ = ox/oy trong game)
+  //  - Idle / Tấn công / Chạy: thêm scale cho cao thấy được bằng Đi bộ (giới hạn 0.92–1.08)
+  //  - Nhóm nhảy: chỉ căn ngang (ảnh đã có độ cao của cú nhảy); các trạng thái còn lại: căn cả chân
+  function alignPet(pName) {
+    var pd = AppState.pets[pName]; if (!pd || !pd.walk.img) return false;
+    var wb = SheetParser.bboxMedian(pd.walk); if (!wb) return false;
+    var c = SheetParser.cellOf(pd.walk, 0), ratio = c.cw / c.ch;
+    pd.walk.dx = ratio * (0.5 - wb.cx); pd.walk.dy = 1 - wb.y1;
     AppState.STATES_DEF.forEach(function (d) {
-      var s = pData[d.k]; if (!s.img && !s.name) return;
-      var nm = s.name || (d.k + '.webp'), parts = ["src: '" + dir + "/" + nm + "'"];
-      if (s.cols !== 6 || s.rows !== 6) parts.push('cols: ' + s.cols, 'rows: ' + s.rows);
-      if (s.frames > 0) parts.push('frames: ' + s.frames);
-      parts.push('scale: ' + r3(s.scale));
-      if (d.k !== 'sleep' && d.k !== 'walk' && s.fps !== AppState.DEF_FPS[d.k]) parts.push('fps: ' + s.fps);
-      if (d.k === 'walk') { if (s.stride !== 1) parts.push('stride: ' + r3(s.stride)); if (s.speed !== 1) parts.push('speed: ' + r3(s.speed)); }
-      if (d.move) { if (r3(s.dx) !== 0) parts.push('dx: ' + r3(s.dx)); if (r3(s.dy) !== 0) parts.push('dy: ' + r3(s.dy)); }
-      if (d.k === 'skill1') parts.push('ballX: ' + Math.round(s.ballX), 'ballY: ' + Math.round(s.ballY));
-      lines.push('    ' + d.cfg + ': {\n      ' + parts.join(',\n      ') + '\n    },');
+      var s = pd[d.k]; if (d.k === 'walk' || !s.img || !s.move) return;
+      var b = SheetParser.bboxMedian(s); if (!b) return;
+      s.scale = (d.k === 'idle' || d.k === 'attack' || d.k === 'run') ? Math.min(1.08, Math.max(0.92, wb.h / b.h)) : 1;
+      s.dx = ratio * (0.5 - b.cx);
+      s.dy = d.k.indexOf('jump') === 0 ? pd.walk.dy : 1 - b.y1;
     });
-
-    $('out').value = lines.length ? "  '" + pet + "': {\n" + lines.join('\n') + "\n  }," : 'Nạp ít nhất một sheet để xem cấu hình.';
+    return true;
   }
 
   function refresh() { syncInputs(); output(); }
@@ -353,6 +358,21 @@ window.UIController = (function () {
     s.dy = 1 - b.y1 + feetG / g.dh;
     s.dx = (cxG - (-g.dw / 2 + (b.x0 + b.x1) / 2 * g.dw)) / g.dh;
     refresh(); $('hint').textContent = 'Đã căn chân và tâm theo ghost.';
+  };
+
+  $('alignAll').onclick = function () {
+    var ok = alignPet(AppState.activePet);
+    refresh(); buildUI(); $('hint').textContent = ok ? 'Đã căn mọi trạng thái của "' + AppState.activePet + '" theo Đi bộ.' : 'Cần nạp sheet Đi bộ trước.';
+  };
+  $('alignEvery').onclick = function () {
+    var n = 0; AppState.petOrder.forEach(function (p) { if (alignPet(p)) n++; });
+    refresh(); buildUI(); $('hint').textContent = 'Đã căn ' + n + '/' + AppState.petOrder.length + ' pet theo Đi bộ.';
+  };
+  $('copyAll').onclick = function () {
+    var t = AppState.petOrder.map(function (p) { return petText(p); }).filter(Boolean).join('\n'), b = $('copyAll');
+    function ok() { b.textContent = 'Đã chép ' + AppState.petOrder.length + ' pet'; setTimeout(function () { b.textContent = 'Sao chép TẤT CẢ pet'; }, 1600); }
+    function fb() { var old = $('out').value; $('out').value = t; $('out').select(); try { document.execCommand('copy'); ok(); } catch (e) { } }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(ok, fb); else fb();
   };
 
   $('reset').onclick = function () {
@@ -469,5 +489,5 @@ window.UIController = (function () {
   refresh();
   Renderer.startLoop();
 
-  return { buildUI: buildUI, refresh: refresh };
+  return { buildUI: buildUI, refresh: refresh, alignPet: alignPet, petText: petText };
 })();

@@ -37,7 +37,28 @@ window.SheetParser = (function () {
     return s._bb;
   }
 
+  // Vùng nhìn thấy theo TỪNG khung rồi lấy trung vị (chính xác hơn bbox của riêng khung 1):
+  // cx = tâm ngang, y1 = chân (trung vị), y1max = chân thấp nhất, h = chiều cao. Tất cả tính theo tỉ lệ khung 0..1.
+  function bboxMedian(s) {
+    var key = s.cols + 'x' + s.rows + ':' + count(s); if (s._mk === key) return s._mb;
+    var c = cellOf(s, 0), k = Math.min(1, 256 / Math.max(c.cw, c.ch)), w = Math.max(1, Math.round(c.cw * k)), h = Math.max(1, Math.round(c.ch * k));
+    var n = count(s), cxs = [], y1s = [], hs = [];
+    tmp.width = w; tmp.height = h;
+    for (var i = 0; i < n; i++) {
+      var cc = cellOf(s, i); tctx.clearRect(0, 0, w, h); tctx.drawImage(s.img, cc.sx, cc.sy, cc.cw, cc.ch, 0, 0, w, h);
+      var d = tctx.getImageData(0, 0, w, h).data, x0 = w, x1 = -1, y0 = h, y1 = -1;
+      for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3] > 16) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+      if (x1 < 0) continue;
+      cxs.push((x0 + x1 + 1) / 2 / w); y1s.push((y1 + 1) / h); hs.push((y1 - y0 + 1) / h);
+    }
+    function med(a) { a = a.slice().sort(function (p, q) { return p - q; }); return a.length ? a[Math.floor(a.length / 2)] : 0; }
+    s._mk = key;
+    s._mb = cxs.length ? { cx: med(cxs), y1: med(y1s), y1max: Math.max.apply(null, y1s), h: med(hs) } : null;
+    return s._mb;
+  }
+
   return {
+    bboxMedian: bboxMedian,
     cellOf: cellOf,
     count: count,
     bbox: bbox
