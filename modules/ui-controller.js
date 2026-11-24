@@ -29,12 +29,13 @@ window.UIController = (function () {
     var parsedAny = false, pd = AppState.pets[targetPet];
 
     // Dòng "// PET_DEF  scale: 1.055, ox: 0.115, oy: 0.112" (do nút Sao chép xuất ra): ox/oy chính là dx/dy của Đi bộ
+    var walkOx = 0, walkOy = 0;
     var pdLine = text.match(/\/\/\s*PET_DEF[^\n]*/);
     if (pdLine) {
       var sc0 = pdLine[0].match(/scale\s*:\s*([\d.]+)/), ox0 = pdLine[0].match(/\box\s*:\s*(-?[\d.]+)/), oy0 = pdLine[0].match(/\boy\s*:\s*(-?[\d.]+)/);
       if (sc0) pd.petScale = parseFloat(sc0[1]);
-      pd.walk.dx = ox0 ? parseFloat(ox0[1]) : 0;
-      pd.walk.dy = oy0 ? parseFloat(oy0[1]) : 0;
+      walkOx = ox0 ? parseFloat(ox0[1]) : 0; walkOy = oy0 ? parseFloat(oy0[1]) : 0;
+      pd.walk.dx = walkOx; pd.walk.dy = walkOy;
     }
 
     // Duyệt đọc từng khối trạng thái (walk/idle/attack... và các mục trong extra:{...})
@@ -42,6 +43,7 @@ window.UIController = (function () {
       var s = pd[d.k];
       var regex = new RegExp('\\b' + d.cfg + '\\s*:\\s*\\{([^}]+)\\}', 'm');
       var match = text.match(regex);
+      if (!match && !d.extra) match = text.match(new RegExp('\\b' + d.k + '\\s*:\\s*\\{([^}]+)\\}', 'm'));   // dạng mới: walk/idle/attack nằm chung trong extra
       if (!(match && match[1])) return;
       var body = match[1];
       parsedAny = true;
@@ -55,7 +57,7 @@ window.UIController = (function () {
       s.scale = pick(/scale\s*:\s*([\d.]+)/, 1, parseFloat);
       s.fps = pick(/fps\s*:\s*([\d.]+)/, AppState.DEF_FPS[d.k] || 12, parseFloat);
       // dx/dy trong cấu hình game là TƯƠNG ĐỐI so với Đi bộ -> cộng lại thành tuyệt đối để vẽ trên sân khấu
-      var wdx = d.k === 'walk' ? 0 : pd.walk.dx, wdy = d.k === 'walk' ? 0 : pd.walk.dy;
+      var wdx = walkOx, wdy = walkOy;   // walk: ox/oy chính là dx/dy; trạng thái khác: dx/dy tương đối + dx/dy của walk
       s.dx = pick(/\bdx\s*:\s*(-?[\d.]+)/, 0, parseFloat) + wdx;
       s.dy = pick(/\bdy\s*:\s*(-?[\d.]+)/, 0, parseFloat) + wdy;
       s.stride = pick(/stride\s*:\s*([\d.]+)/, 1, parseFloat);
@@ -227,26 +229,23 @@ window.UIController = (function () {
   // Trong game: ox/oy (PET_DEF) = dx/dy của Đi bộ, còn dx/dy các trạng thái khác là TƯƠNG ĐỐI so với Đi bộ.
   function petText(pName, label) {
     var pData = AppState.pets[pName]; if (!pData) return '';
-    var dir = 'Character/' + (label || pName).toUpperCase(), top = [], extra = [], w = pData.walk;
+    var dir = 'Character/' + (label || pName).toUpperCase(), lines = [], w = pData.walk;
     AppState.STATES_DEF.forEach(function (d) {
       var s = pData[d.k]; if (!s.img && !s.name) return;
-      var nm = s.rel || s.name || (d.k + '.png'), ind = d.extra ? '      ' : '    ', parts = ["src: '" + dir + "/" + nm + "'"];
-      if (s.cols !== d.cols || s.rows !== d.rows) parts.push('cols: ' + s.cols, 'rows: ' + s.rows);
+      var nm = s.rel || s.name || (d.k + '.png'), parts = ["src: '" + dir + "/" + nm + "'", 'cols: ' + s.cols, 'rows: ' + s.rows, 'max: 176'];
       if (s.frames > 0) parts.push('frames: ' + s.frames);
-      if (r3(s.scale) !== 1) parts.push('scale: ' + r3(s.scale));
       if (d.k !== 'sleep' && d.k !== 'walk' && s.fps !== AppState.DEF_FPS[d.k]) parts.push('fps: ' + s.fps);
       if (d.k === 'walk') { if (s.stride !== 1) parts.push('stride: ' + r3(s.stride)); if (s.speed !== 1) parts.push('speed: ' + r3(s.speed)); }
       else if (d.move) {
+        if (r3(s.scale) !== 1) parts.push('scale: ' + r3(s.scale));
         var rx = r3(s.dx - w.dx), ry = r3(s.dy - w.dy);
         if (rx !== 0) parts.push('dx: ' + rx); if (ry !== 0) parts.push('dy: ' + ry);
       }
       if (d.k === 'skill1') parts.push('ballX: ' + Math.round(s.ballX), 'ballY: ' + Math.round(s.ballY));
-      if (d.extra) extra.push(ind + d.cfg + ': { ' + parts.join(', ') + ' },');
-      else top.push(ind + d.cfg + ': {\n' + ind + '  ' + parts.join(',\n' + ind + '  ') + '\n' + ind + '},');
+      lines.push('      ' + d.k + ': { ' + parts.join(', ') + ' },');
     });
-    if (!top.length && !extra.length) return '';
-    var head = '// PET_DEF  scale: ' + r3(pData.petScale) + ', ox: ' + r3(w.dx) + ', oy: ' + r3(w.dy) + '\n';
-    return head + "  '" + pName + "': {\n" + top.join('\n') + (extra.length ? '\n    extra: {\n' + extra.join('\n') + '\n    },' : '') + "\n  },";
+    if (!lines.length) return '';
+    return '// PET_DEF  scale: ' + r3(pData.petScale) + ', ox: ' + r3(w.dx) + ', oy: ' + r3(w.dy) + "\n  '" + pName + "': { extra: {\n" + lines.join('\n') + '\n  } },';
   }
 
   function output() {
