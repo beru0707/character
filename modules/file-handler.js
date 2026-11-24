@@ -6,6 +6,8 @@ window.FileHandler = (function () {
     ['jumpfall', ['jump_fall', 'jumpfall', 'jump-fall']],
     ['dizzy', ['dizzy', 'hurt_dizzy', 'choang']],
     ['hurt', ['hurt', 'bi_danh']],
+    ['dead2', ['02-dead', '02_dead', 'dead2']],
+    ['stone', ['stone']],
     ['dead', ['dead', 'death', 'die', 'chet']],
     ['run', ['run', 'chay']],
     ['walk', ['walk', 'move', 'di_bo', 'dibo']],
