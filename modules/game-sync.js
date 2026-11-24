@@ -142,7 +142,7 @@ window.GameSync = (function () {
         var s = pd[k]; if (!s || !(s.img || s.name)) return;
         var o = { src: 'Character/' + dir + '/' + (s.rel || s.name), cols: s.cols, rows: s.rows, max: (prev[k] && prev[k].max) || 176 };
         if (s.frames > 0) o.frames = s.frames;
-        if (k !== 'walk' && s.fps !== AppState.DEF_FPS[k]) o.fps = s.fps;
+        if (k === 'idle' || k === 'attack' || (k !== 'walk' && s.fps !== AppState.DEF_FPS[k])) o.fps = s.fps;   // idle/attack luôn ghi fps (mặc định của game khác công cụ)
         if (k === 'walk') { if (s.stride !== 1) o.stride = r3(s.stride); if (s.speed !== 1) o.speed = r3(s.speed); }
         else {
           if (r3(s.scale) !== 1) o.scale = r3(s.scale);
