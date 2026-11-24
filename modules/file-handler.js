@@ -26,6 +26,8 @@ window.FileHandler = (function () {
     return null;
   }
 
+  var pending = 0;   // số ảnh đang nạp (GameSync chờ về 0)
+
   function loadFileToPetState(file, petName, targetStateKey, onLoaded) {
     if (!file) return;
     if (!AppState.pets[petName]) {
@@ -36,8 +38,10 @@ window.FileHandler = (function () {
 
     var s = AppState.pets[petName][targetStateKey || AppState.curState];
     // Có cả 01-Idle.png và 02-Idle_Blink.png: ưu tiên bản chớp mắt (game dùng bản đó)
-    var img = new Image();
+    var img = new Image(); pending++;
+    img.onerror = function () { pending--; };
     img.onload = function () {
+      pending--;
       if (targetStateKey === 'idle' && s.name && /blink/i.test(s.name) && !/blink/i.test(file.name)) return;   // đã có bản chớp mắt: giữ lại
       s.img = img;
       s.name = file.name;
@@ -82,7 +86,7 @@ window.FileHandler = (function () {
     path = path || "";
     if (item.isFile) {
       item.file(function (file) {
-        file.webkitRelativePath = path + file.name;
+        try { Object.defineProperty(file, 'webkitRelativePath', { value: path + file.name }); } catch (e) { }
         onFile(file);
         onComplete();
       }, onComplete);
@@ -103,6 +107,8 @@ window.FileHandler = (function () {
   }
 
   return {
+    get pending() { return pending; },
+    loadFile: loadFileToPetState,
     processFileList: processFileList,
     traverseFileTree: traverseFileTree
   };

@@ -54,6 +54,12 @@
         <span class="hint-tag" id="petCountTag">0 pet</span>
       </div>
 
+      <div class="row" style="margin-bottom:8px;align-items:center;gap:8px;flex-wrap:wrap">
+        <button id="gsOpen" class="pri">📂 Mở thư mục game</button>
+        <button id="gsSave" disabled>💾 Lưu vào game</button>
+      </div>
+      <p class="hint" id="gsStatus" style="margin:0 0 10px"></p>
+
       <div class="pet-selector" id="petSelector"></div>
 
       <label class="file" id="drop">
@@ -99,6 +105,7 @@
 <script src="modules/renderer.js"></script>
 <script src="modules/file-handler.js"></script>
 <script src="modules/ui-controller.js"></script>
+<script src="modules/game-sync.js"></script>
 
 </body>
 </html>
